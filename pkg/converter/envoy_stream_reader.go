@@ -2,20 +2,21 @@ package converter
 
 import (
 	"encoding/json"
-	"fmt"
 	v2 "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v2"
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/previousdeveloper/als-collector/pkg/client"
 	"io"
 )
 
 type server struct {
 	marshaler jsonpb.Marshaler
+	cb        client.CBBucket
 }
 
 var _ v2.AccessLogServiceServer = &server{}
 
-func New() v2.AccessLogServiceServer {
-	return &server{}
+func New(cb client.CBBucket) v2.AccessLogServiceServer {
+	return &server{cb: cb}
 }
 
 func (s *server) StreamAccessLogs(stream v2.AccessLogService_StreamAccessLogsServer) error {
@@ -31,8 +32,7 @@ func (s *server) StreamAccessLogs(stream v2.AccessLogService_StreamAccessLogsSer
 		for _, logEntry := range logEntries {
 			var data []byte
 			data, err = json.Marshal(logEntry)
-			fmt.Println(string(data))
+			s.cb.Upsert(data)
 		}
-		//_ = es.Close(context.Background())
 	}
 }

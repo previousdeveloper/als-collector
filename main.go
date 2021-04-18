@@ -2,6 +2,7 @@ package main
 
 import (
 	v2 "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v2"
+	"github.com/previousdeveloper/als-collector/pkg/client"
 	"github.com/previousdeveloper/als-collector/pkg/converter"
 	"github.com/previousdeveloper/als-collector/pkg/logger"
 	"google.golang.org/grpc"
@@ -14,9 +15,10 @@ import (
 func main() {
 	customL := logger.NewLogger()
 
+	bucket, _ := client.NewCouchbaseBucket()
 	grpcServer := grpc.NewServer()
 	//Acl log
-	v2.RegisterAccessLogServiceServer(grpcServer, converter.New())
+	v2.RegisterAccessLogServiceServer(grpcServer, converter.New(bucket))
 
 	listener, err := net.Listen("tcp", ":8082")
 	if err != nil {
