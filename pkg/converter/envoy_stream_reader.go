@@ -28,8 +28,15 @@ func (s *server) StreamAccessLogs(stream v2.AccessLogService_StreamAccessLogsSer
 		if err != nil {
 			return err
 		}
-		logEntries := transform(in.GetHttpLogs())
-		for _, logEntry := range logEntries {
+		httpLogs := transform(in.GetHttpLogs())
+		tcpLogs := transformTcp(in.GetTcpLogs())
+		for _, logEntry := range httpLogs {
+			var data []byte
+			data, err = json.Marshal(logEntry)
+			s.cb.Upsert(data)
+		}
+
+		for _, logEntry := range tcpLogs {
 			var data []byte
 			data, err = json.Marshal(logEntry)
 			s.cb.Upsert(data)

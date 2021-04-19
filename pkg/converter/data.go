@@ -18,9 +18,9 @@ type requestFields struct {
 }
 
 type responseFields struct {
-	Details                     string        `json:"details"`
-	HeadersBytes                uint64        `json:"headersBytes"`
-	BodyBytes                   uint64        `json:"bodyBytes"`
+	Details      string `json:"details"`
+	HeadersBytes uint64 `json:"headersBytes"`
+	BodyBytes    uint64 `json:"bodyBytes"`
 }
 
 type EnvoyLog struct {
@@ -90,12 +90,39 @@ func transform(bundle *v2.StreamAccessLogsMessage_HTTPAccessLogEntries) []EnvoyL
 				RemoteIP:     logEntry.CommonProperties.GetDownstreamRemoteAddress().GetSocketAddress().Address,
 			},
 			Response: responseFields{
-				Details:                     logEntry.Response.GetResponseCodeDetails(),
-				HeadersBytes:                logEntry.Response.GetResponseHeadersBytes(),
-				BodyBytes:                   logEntry.Response.GetResponseBodyBytes(),
+				Details:      logEntry.Response.GetResponseCodeDetails(),
+				HeadersBytes: logEntry.Response.GetResponseHeadersBytes(),
+				BodyBytes:    logEntry.Response.GetResponseBodyBytes(),
 			},
 		})
 	}
 	return envoyLogs
 }
 
+func transformTcp(bundle *v2.StreamAccessLogsMessage_TCPAccessLogEntries) []EnvoyLog {
+	var envoyLogs []EnvoyLog
+
+	for _, logEntry := range bundle.LogEntry {
+		envoyLogs = append(envoyLogs, EnvoyLog{
+			DownstreamRemoteAddress: socketAddress{
+				Address: logEntry.CommonProperties.GetDownstreamRemoteAddress().GetSocketAddress().GetAddress(),
+				Port:    uint64(logEntry.CommonProperties.GetDownstreamRemoteAddress().GetSocketAddress().GetPortValue()),
+			},
+			DownstreamLocalAddress: socketAddress{
+				Address: logEntry.CommonProperties.GetDownstreamLocalAddress().GetSocketAddress().GetAddress(),
+				Port:    uint64(logEntry.CommonProperties.GetDownstreamLocalAddress().GetSocketAddress().GetPortValue()),
+			},
+			UpstreamRemoteAddress: socketAddress{
+				Address: logEntry.CommonProperties.GetUpstreamRemoteAddress().GetSocketAddress().GetAddress(),
+				Port:    uint64(logEntry.CommonProperties.GetUpstreamRemoteAddress().GetSocketAddress().GetPortValue()),
+			},
+			UpstreamLocalAddress: socketAddress{
+				Address: logEntry.CommonProperties.GetUpstreamLocalAddress().GetSocketAddress().GetAddress(),
+				Port:    uint64(logEntry.CommonProperties.GetUpstreamLocalAddress().GetSocketAddress().GetPortValue()),
+			},
+			Time: logEntry.CommonProperties.GetTimeToLastDownstreamTxByte().AsDuration() / time.Millisecond,
+		})
+	}
+
+	return envoyLogs
+}
